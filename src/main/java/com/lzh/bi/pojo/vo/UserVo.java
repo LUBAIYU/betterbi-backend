@@ -1,6 +1,5 @@
-package com.lzh.bi.pojo.entity;
+package com.lzh.bi.pojo.vo;
 
-import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
@@ -8,28 +7,19 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * 用户
- *
  * @author lzh
  */
-@TableName(value = "user")
 @Data
-public class User implements Serializable {
+public class UserVo implements Serializable {
     /**
      * 主键ID
      */
-    @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
     /**
      * 账号
      */
     private String userAccount;
-
-    /**
-     * 密码
-     */
-    private String userPassword;
 
     /**
      * 用户昵称
@@ -57,13 +47,4 @@ public class User implements Serializable {
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updateTime;
-
-    /**
-     * 是否删除
-     */
-    @TableLogic
-    private Integer isDelete;
-
-    @TableField(exist = false)
-    private static final long serialVersionUID = 1L;
 }
