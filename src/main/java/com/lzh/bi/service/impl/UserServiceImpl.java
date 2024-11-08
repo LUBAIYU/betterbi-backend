@@ -1,6 +1,7 @@
 package com.lzh.bi.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.DigestUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -19,16 +20,32 @@ import com.lzh.bi.pojo.entity.User;
 import com.lzh.bi.pojo.vo.UserVo;
 import com.lzh.bi.service.UserService;
 import com.lzh.bi.utils.PageBean;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.UUID;
 
 /**
  * @author lzh
  */
 @Service
+@Slf4j
 public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         implements UserService {
+
+    @Value("${betterbi.server.path.domain}")
+    private String domain;
+
+    @Value("${betterbi.server.path.address}")
+    private String address;
 
     @Override
     public UserVo userLogin(UserLoginDto dto, HttpServletRequest request) {
@@ -161,6 +178,60 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
         // 修改用户信息
         return this.updateById(user);
+    }
+
+    @Override
+    public String uploadAvatar(MultipartFile multipartFile) {
+        // 判断文件名是否存在
+        String originalFilename = multipartFile.getOriginalFilename();
+        if (StrUtil.isBlank(originalFilename)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+
+        // 判断后缀名是否存在
+        String suffix = originalFilename.substring(originalFilename.lastIndexOf("."));
+        if (StrUtil.isBlank(suffix)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+
+        // 生成随机文件名
+        String newFileName = UUID.randomUUID().toString().replace("-", "") + suffix;
+        // 上传图片
+        File file = new File(address + "/" + newFileName);
+
+        try {
+            multipartFile.transferTo(file);
+        } catch (Exception e) {
+            log.error("图片上传失败", e);
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "图片上传失败");
+        }
+
+        // 返回图片请求地址
+        return domain + "/user/get/avatar/" + newFileName;
+    }
+
+    @Override
+    public void getAvatar(String fileName, HttpServletResponse response) {
+        // 获取图片后缀名
+        String suffix = fileName.substring(fileName.lastIndexOf(".") + 1);
+        // 获取图片存放路径
+        String url = address + "/" + suffix;
+        // 响应图片
+        response.setContentType("image/" + suffix);
+
+        // 从服务器读取图片
+        try (
+                // 获取输出流
+                OutputStream outputStream = response.getOutputStream();
+                // 获取输入流
+                FileInputStream inputStream = new FileInputStream(url)
+        ) {
+            // 将输入流中的数据复制到输出流中
+            IoUtil.copy(inputStream, outputStream);
+        } catch (IOException e) {
+            log.error("文件读取失败", e);
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "文件读取失败");
+        }
     }
 }
 

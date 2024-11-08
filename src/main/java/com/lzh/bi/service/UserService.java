@@ -8,8 +8,10 @@ import com.lzh.bi.pojo.dto.UserUpdateDto;
 import com.lzh.bi.pojo.entity.User;
 import com.lzh.bi.pojo.vo.UserVo;
 import com.lzh.bi.utils.PageBean;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 /**
  * @author lzh
@@ -65,4 +67,20 @@ public interface UserService extends IService<User> {
      * @return 是否修改成功
      */
     boolean updateUserById(UserUpdateDto dto, HttpServletRequest request);
+
+    /**
+     * 上传图片（头像）
+     *
+     * @param multipartFile 文件对象
+     * @return 图片地址
+     */
+    String uploadAvatar(MultipartFile multipartFile);
+
+    /**
+     * 获取图片
+     *
+     * @param fileName 图片名称
+     * @param response 响应对象
+     */
+    void getAvatar(String fileName, HttpServletResponse response);
 }

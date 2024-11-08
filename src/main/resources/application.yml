@@ -1,6 +1,8 @@
 # 端口配置
 server:
   port: 8000
+  servlet:
+    context-path: /api
 
 # 数据源配置
 spring:
@@ -24,3 +26,12 @@ mybatis-plus:
   # 配置mybatis-plus的日志
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# 配置图片存储位置
+betterbi:
+  server:
+    path:
+      # 指定图片请求前缀
+      domain: http://localhost:8000/api
+      # 指定图片存储位置
+      address: ${user.dir}/images
