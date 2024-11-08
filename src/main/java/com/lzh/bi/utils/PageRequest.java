@@ -15,11 +15,11 @@ public class PageRequest implements Serializable {
     /**
      * 当前页码
      */
-    @NotNull
+    @NotNull(message = "页码不能为null")
     private Integer current = 1;
     /**
      * 每页记录数
      */
-    @NotNull
+    @NotNull(message = "每页记录数不能为null")
     private Integer pageSize = 10;
 }

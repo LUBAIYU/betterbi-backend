@@ -1,6 +1,5 @@
-package com.lzh.bi.pojo.entity;
+package com.lzh.bi.pojo.vo;
 
-import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
@@ -8,17 +7,14 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * 图表信息表
- *
  * @author lzh
  */
-@TableName(value = "chart")
 @Data
-public class Chart implements Serializable {
+public class ChartVo implements Serializable {
+
     /**
      * 主键ID
      */
-    @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
     /**
@@ -47,11 +43,6 @@ public class Chart implements Serializable {
     private String genResult;
 
     /**
-     * 创建用户 ID
-     */
-    private Long userId;
-
-    /**
      * 创建时间
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
@@ -62,13 +53,4 @@ public class Chart implements Serializable {
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updateTime;
-
-    /**
-     * 是否删除
-     */
-    @TableLogic
-    private Integer isDelete;
-
-    @TableField(exist = false)
-    private static final long serialVersionUID = 1L;
 }
