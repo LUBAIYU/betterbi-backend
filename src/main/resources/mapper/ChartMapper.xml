@@ -6,6 +6,7 @@
 
     <resultMap id="BaseResultMap" type="com.lzh.bi.pojo.entity.Chart">
         <id property="id" column="id" jdbcType="BIGINT"/>
+        <result property="name" column="name" jdbcType="VARCHAR"/>
         <result property="goal" column="goal" jdbcType="VARCHAR"/>
         <result property="chartData" column="chart_data" jdbcType="VARCHAR"/>
         <result property="chartType" column="chart_type" jdbcType="VARCHAR"/>
@@ -18,7 +19,7 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        id,goal,chart_data,
+        id,`name`,goal,chart_data,
         chart_type,gen_chart,gen_result,
         user_id,create_time,update_time,
         is_delete

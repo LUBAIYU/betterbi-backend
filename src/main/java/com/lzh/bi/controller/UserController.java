@@ -92,4 +92,9 @@ public class UserController {
         }
         userService.getAvatar(fileName, response);
     }
+
+    @GetMapping("/getLoginUser")
+    public Result<UserVo> getLoginUser(HttpServletRequest request) {
+        return Result.success(userService.getLoginUser(request));
+    }
 }

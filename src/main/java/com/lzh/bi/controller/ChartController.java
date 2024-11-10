@@ -4,10 +4,7 @@ import com.lzh.bi.annotation.LoginCheck;
 import com.lzh.bi.annotation.MustAdmin;
 import com.lzh.bi.enums.ErrorCode;
 import com.lzh.bi.exception.BusinessException;
-import com.lzh.bi.pojo.dto.ChartAddDto;
-import com.lzh.bi.pojo.dto.ChartQueryAdminDto;
-import com.lzh.bi.pojo.dto.ChartQueryDto;
-import com.lzh.bi.pojo.dto.ChartUpdateDto;
+import com.lzh.bi.pojo.dto.*;
 import com.lzh.bi.pojo.entity.Chart;
 import com.lzh.bi.pojo.vo.ChartVo;
 import com.lzh.bi.service.ChartService;
@@ -16,6 +13,7 @@ import com.lzh.bi.utils.Result;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
@@ -72,5 +70,11 @@ public class ChartController {
     @PostMapping("/page")
     public Result<PageBean<Chart>> listChartsByPage(@Valid @RequestBody ChartQueryAdminDto dto) {
         return Result.success(chartService.listChartsByPage(dto));
+    }
+
+    @LoginCheck
+    @PostMapping("/genChart")
+    public Result<String> genChartByAi(@RequestPart("file") MultipartFile multipartFile, @Valid ChartGenDto dto, HttpServletRequest request) {
+        return Result.success(chartService.genChartByAi(multipartFile, dto, request));
     }
 }

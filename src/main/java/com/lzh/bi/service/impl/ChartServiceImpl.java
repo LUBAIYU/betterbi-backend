@@ -10,17 +10,16 @@ import com.lzh.bi.enums.ErrorCode;
 import com.lzh.bi.enums.RoleEnum;
 import com.lzh.bi.exception.BusinessException;
 import com.lzh.bi.mapper.ChartMapper;
-import com.lzh.bi.pojo.dto.ChartAddDto;
-import com.lzh.bi.pojo.dto.ChartQueryAdminDto;
-import com.lzh.bi.pojo.dto.ChartQueryDto;
-import com.lzh.bi.pojo.dto.ChartUpdateDto;
+import com.lzh.bi.pojo.dto.*;
 import com.lzh.bi.pojo.entity.Chart;
 import com.lzh.bi.pojo.vo.ChartVo;
 import com.lzh.bi.pojo.vo.UserVo;
 import com.lzh.bi.service.ChartService;
 import com.lzh.bi.service.UserService;
+import com.lzh.bi.utils.ExcelUtil;
 import com.lzh.bi.utils.PageBean;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -135,6 +134,7 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
         // 查询
         IPage<Chart> result = this.lambdaQuery()
                 .eq(dto.getId() != null, Chart::getId, dto.getId())
+                .like(StrUtil.isNotBlank(dto.getName()), Chart::getName, dto.getName())
                 .like(StrUtil.isNotBlank(dto.getGoal()), Chart::getGoal, dto.getGoal())
                 .like(StrUtil.isNotBlank(dto.getChartType()), Chart::getChartType, dto.getChartType())
                 .eq(loginUserId != null, Chart::getUserId, loginUserId)
@@ -164,6 +164,7 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
         // 查询
         IPage<Chart> result = this.lambdaQuery()
                 .eq(dto.getId() != null, Chart::getId, dto.getId())
+                .like(StrUtil.isNotBlank(dto.getName()), Chart::getName, dto.getName())
                 .like(StrUtil.isNotBlank(dto.getGoal()), Chart::getGoal, dto.getGoal())
                 .like(StrUtil.isNotBlank(dto.getChartType()), Chart::getChartType, dto.getChartType())
                 .eq(dto.getUserId() != null, Chart::getUserId, dto.getUserId())
@@ -171,6 +172,24 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
                 .page(pageParam);
 
         return PageBean.of(result.getTotal(), result.getRecords());
+    }
+
+    @Override
+    public String genChartByAi(MultipartFile multipartFile, ChartGenDto dto, HttpServletRequest request) {
+        String name = dto.getName();
+        String goal = dto.getGoal();
+        String chartType = dto.getChartType();
+
+        // 将Excel数据转换为CSV格式
+        String csvData = ExcelUtil.excelToCsv(multipartFile);
+
+        // 拼接请求，向AI输入数据
+        StringBuilder userInput = new StringBuilder();
+        userInput.append("你是一个数据分析师，接下来我会给你我的分析目标和原始数据，请告诉我分析结论").append("\n");
+        userInput.append("分析目标：").append(goal).append("\n");
+        userInput.append("数据：").append(csvData).append("\n");
+
+        return userInput.toString();
     }
 }
 

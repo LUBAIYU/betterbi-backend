@@ -10,6 +10,13 @@ import java.io.Serializable;
  */
 @Data
 public class ChartAddDto implements Serializable {
+
+    /**
+     * 图表名称
+     */
+    @NotBlank(message = "图表名称不能为空")
+    private String name;
+
     /**
      * 分析目标
      */

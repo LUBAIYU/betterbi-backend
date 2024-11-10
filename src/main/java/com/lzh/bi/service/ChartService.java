@@ -1,13 +1,11 @@
 package com.lzh.bi.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.lzh.bi.pojo.dto.ChartAddDto;
-import com.lzh.bi.pojo.dto.ChartQueryAdminDto;
-import com.lzh.bi.pojo.dto.ChartQueryDto;
-import com.lzh.bi.pojo.dto.ChartUpdateDto;
+import com.lzh.bi.pojo.dto.*;
 import com.lzh.bi.pojo.entity.Chart;
 import com.lzh.bi.pojo.vo.ChartVo;
 import com.lzh.bi.utils.PageBean;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -68,4 +66,14 @@ public interface ChartService extends IService<Chart> {
      * @return Chart列表
      */
     PageBean<Chart> listChartsByPage(ChartQueryAdminDto dto);
+
+    /**
+     * AI生成图表
+     *
+     * @param multipartFile 数据文件
+     * @param dto           生成目标
+     * @param request       HttpServletRequest
+     * @return 数据
+     */
+    String genChartByAi(MultipartFile multipartFile, ChartGenDto dto, HttpServletRequest request);
 }
