@@ -9,9 +9,11 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.lzh.bi.enums.ErrorCode;
 import com.lzh.bi.enums.RoleEnum;
 import com.lzh.bi.exception.BusinessException;
+import com.lzh.bi.manager.AiManager;
 import com.lzh.bi.mapper.ChartMapper;
 import com.lzh.bi.pojo.dto.*;
 import com.lzh.bi.pojo.entity.Chart;
+import com.lzh.bi.pojo.vo.AiRespVo;
 import com.lzh.bi.pojo.vo.ChartVo;
 import com.lzh.bi.pojo.vo.UserVo;
 import com.lzh.bi.service.ChartService;
@@ -36,6 +38,9 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private AiManager aiManager;
 
     @Override
     public long addChart(ChartAddDto dto, HttpServletRequest request) {
@@ -175,7 +180,7 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
     }
 
     @Override
-    public String genChartByAi(MultipartFile multipartFile, ChartGenDto dto, HttpServletRequest request) {
+    public AiRespVo genChartByAi(MultipartFile multipartFile, ChartGenDto dto, HttpServletRequest request) {
         String name = dto.getName();
         String goal = dto.getGoal();
         String chartType = dto.getChartType();
@@ -185,11 +190,42 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
 
         // 拼接请求，向AI输入数据
         StringBuilder userInput = new StringBuilder();
-        userInput.append("你是一个数据分析师，接下来我会给你我的分析目标和原始数据，请告诉我分析结论").append("\n");
         userInput.append("分析目标：").append(goal).append("\n");
+        if (StrUtil.isNotBlank(chartType)) {
+            userInput.append("请使用").append(chartType).append("\n");
+        }
         userInput.append("数据：").append(csvData).append("\n");
 
-        return userInput.toString();
+        // 调用AI获取结果
+        String res = aiManager.sendMsgToXingHuo(true, userInput.toString());
+
+        // 对结果进行切割
+        String[] results = res.split("'【【【【【'");
+        if (results.length < 3) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "AI生成结果错误");
+        }
+        String genChart = results[1].trim();
+        String genResult = results[2].trim();
+
+        // 保存图表数据
+        UserVo userVo = userService.getLoginUser(request);
+        Long userId = userVo.getId();
+        Chart chart = new Chart();
+        chart.setUserId(userId);
+        chart.setName(name);
+        chart.setGoal(goal);
+        chart.setChartType(chartType);
+        chart.setChartData(csvData);
+        chart.setGenChart(genChart);
+        chart.setGenResult(genResult);
+        this.save(chart);
+
+        // 返回结果
+        AiRespVo respVo = new AiRespVo();
+        respVo.setGenChart(genChart);
+        respVo.setGenResult(genResult);
+        respVo.setChartId(chart.getId());
+        return respVo;
     }
 }
 

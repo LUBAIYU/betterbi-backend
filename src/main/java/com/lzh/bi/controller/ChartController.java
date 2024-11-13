@@ -6,6 +6,7 @@ import com.lzh.bi.enums.ErrorCode;
 import com.lzh.bi.exception.BusinessException;
 import com.lzh.bi.pojo.dto.*;
 import com.lzh.bi.pojo.entity.Chart;
+import com.lzh.bi.pojo.vo.AiRespVo;
 import com.lzh.bi.pojo.vo.ChartVo;
 import com.lzh.bi.service.ChartService;
 import com.lzh.bi.utils.PageBean;
@@ -74,7 +75,7 @@ public class ChartController {
 
     @LoginCheck
     @PostMapping("/genChart")
-    public Result<String> genChartByAi(@RequestPart("file") MultipartFile multipartFile, @Valid ChartGenDto dto, HttpServletRequest request) {
+    public Result<AiRespVo> genChartByAi(@RequestPart("file") MultipartFile multipartFile, @Valid ChartGenDto dto, HttpServletRequest request) {
         return Result.success(chartService.genChartByAi(multipartFile, dto, request));
     }
 }

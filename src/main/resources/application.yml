@@ -35,3 +35,10 @@ betterbi:
       domain: http://localhost:8000/api
       # 指定图片存储位置
       address: ${user.dir}/images
+
+# 讯飞星火大模型配置
+xun-fei:
+  client:
+    app-id: f5ffd68a
+    api-secret: NTE3OWQ1ZjI3OTA2N2FlOTU0NzlhYzMy
+    api-key: 2e920494509fa2b0e15a923d4c81fc3a
