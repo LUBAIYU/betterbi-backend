@@ -192,7 +192,7 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
         StringBuilder userInput = new StringBuilder();
         userInput.append("分析目标：").append(goal).append("\n");
         if (StrUtil.isNotBlank(chartType)) {
-            userInput.append("请使用").append(chartType).append("\n");
+            userInput.append("请精确使用").append(chartType).append("\n");
         }
         userInput.append("数据：").append(csvData).append("\n");
 
