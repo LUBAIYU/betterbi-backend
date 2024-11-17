@@ -3,6 +3,7 @@ package com.lzh.bi.controller;
 import cn.hutool.core.util.StrUtil;
 import com.lzh.bi.annotation.LoginCheck;
 import com.lzh.bi.annotation.MustAdmin;
+import com.lzh.bi.constants.UserConst;
 import com.lzh.bi.enums.ErrorCode;
 import com.lzh.bi.exception.BusinessException;
 import com.lzh.bi.pojo.dto.UserLoginDto;
@@ -96,5 +97,15 @@ public class UserController {
     @GetMapping("/getLoginUser")
     public Result<UserVo> getLoginUser(HttpServletRequest request) {
         return Result.success(userService.getLoginUser(request));
+    }
+
+    @LoginCheck
+    @PostMapping("/logout")
+    public Result<Void> userLogout(HttpServletRequest request) {
+        if (request == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        request.getSession().setAttribute(UserConst.USER_LOGIN_STATE, null);
+        return Result.success();
     }
 }

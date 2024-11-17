@@ -63,7 +63,8 @@ public interface UserService extends IService<User> {
     /**
      * 根据ID修改用户信息
      *
-     * @param dto 用户信息参数
+     * @param dto     用户信息参数
+     * @param request 请求
      * @return 是否修改成功
      */
     boolean updateUserById(UserUpdateDto dto, HttpServletRequest request);
