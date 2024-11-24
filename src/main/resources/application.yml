@@ -15,6 +15,11 @@ spring:
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher
+  # redis配置
+  redis:
+    database: 1
+    host: localhost
+    port: 6379
 
 # mybatis-plus配置
 mybatis-plus:
@@ -35,6 +40,7 @@ betterbi:
       domain: http://localhost:8000/api
       # 指定图片存储位置
       address: ${user.dir}/images
+
 
 # 讯飞星火大模型配置
 xun-fei:

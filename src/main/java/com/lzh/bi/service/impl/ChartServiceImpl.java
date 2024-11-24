@@ -2,14 +2,17 @@ package com.lzh.bi.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.lzh.bi.constants.CommonConst;
 import com.lzh.bi.enums.ErrorCode;
 import com.lzh.bi.enums.RoleEnum;
 import com.lzh.bi.exception.BusinessException;
 import com.lzh.bi.manager.AiManager;
+import com.lzh.bi.manager.RedisLimiterManager;
 import com.lzh.bi.mapper.ChartMapper;
 import com.lzh.bi.pojo.dto.*;
 import com.lzh.bi.pojo.entity.Chart;
@@ -41,6 +44,9 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
 
     @Resource
     private AiManager aiManager;
+
+    @Resource
+    private RedisLimiterManager redisLimiterManager;
 
     @Override
     public long addChart(ChartAddDto dto, HttpServletRequest request) {
@@ -181,9 +187,19 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
 
     @Override
     public AiRespVo genChartByAi(MultipartFile multipartFile, ChartGenDto dto, HttpServletRequest request) {
+        // 获取登录用户信息
+        UserVo userVo = userService.getLoginUser(request);
+        Long userId = userVo.getId();
+
+        // 执行限流操作
+        redisLimiterManager.doRateLimit("genChartByAi_" + userId);
+
         String name = dto.getName();
         String goal = dto.getGoal();
         String chartType = dto.getChartType();
+
+        // 校验文件
+        checkFile(multipartFile);
 
         // 将Excel数据转换为CSV格式
         String csvData = ExcelUtil.excelToCsv(multipartFile);
@@ -208,8 +224,6 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
         String genResult = results[2].trim();
 
         // 保存图表数据
-        UserVo userVo = userService.getLoginUser(request);
-        Long userId = userVo.getId();
         Chart chart = new Chart();
         chart.setUserId(userId);
         chart.setName(name);
@@ -226,6 +240,26 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
         respVo.setGenResult(genResult);
         respVo.setChartId(chart.getId());
         return respVo;
+    }
+
+    /**
+     * 校验文件是否符合要求
+     *
+     * @param file 文件
+     */
+    private void checkFile(MultipartFile file) {
+        // 获取文件大小
+        long size = file.getSize();
+        // 获取文件原始文件名
+        String filename = file.getOriginalFilename();
+        if (size > CommonConst.FILE_MAX_SIZE) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "文件大小超过1MB");
+        }
+        // 获取文件后缀
+        String suffix = FileUtil.getSuffix(filename);
+        if (!CommonConst.FILE_TYPE_LIST.contains(suffix)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "文件类型不支持");
+        }
     }
 }
 

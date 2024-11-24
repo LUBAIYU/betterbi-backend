@@ -24,4 +24,8 @@
         user_id,create_time,update_time,
         is_delete
     </sql>
+
+    <select id="queryChartData" parameterType="string" resultType="map">
+        ${querySql}
+    </select>
 </mapper>
