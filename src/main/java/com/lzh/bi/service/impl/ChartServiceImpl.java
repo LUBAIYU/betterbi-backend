@@ -10,6 +10,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.lzh.bi.constants.CommonConst;
 import com.lzh.bi.enums.ErrorCode;
 import com.lzh.bi.enums.RoleEnum;
+import com.lzh.bi.enums.StatusEnum;
 import com.lzh.bi.exception.BusinessException;
 import com.lzh.bi.manager.AiManager;
 import com.lzh.bi.manager.RedisLimiterManager;
@@ -23,6 +24,7 @@ import com.lzh.bi.service.ChartService;
 import com.lzh.bi.service.UserService;
 import com.lzh.bi.utils.ExcelUtil;
 import com.lzh.bi.utils.PageBean;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -30,12 +32,15 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.stream.Collectors;
 
 /**
  * @author lzh
  */
 @Service
+@Slf4j
 public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
         implements ChartService {
 
@@ -47,6 +52,9 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
 
     @Resource
     private RedisLimiterManager redisLimiterManager;
+
+    @Resource
+    private ThreadPoolExecutor threadPoolExecutor;
 
     @Override
     public long addChart(ChartAddDto dto, HttpServletRequest request) {
@@ -212,18 +220,6 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
         }
         userInput.append("数据：").append(csvData).append("\n");
 
-        // 调用AI获取结果
-        String res = aiManager.sendMsgToXingHuo(true, userInput.toString());
-
-        // 对结果进行切割
-        String[] results = res.split("'【【【【【'");
-        int len = 3;
-        if (results.length < len) {
-            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "AI生成结果错误");
-        }
-        String genChart = results[1].trim();
-        String genResult = results[2].trim();
-
         // 保存图表数据
         Chart chart = new Chart();
         chart.setUserId(userId);
@@ -231,16 +227,71 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
         chart.setGoal(goal);
         chart.setChartType(chartType);
         chart.setChartData(csvData);
-        chart.setGenChart(genChart);
-        chart.setGenResult(genResult);
-        this.save(chart);
+        chart.setStatus(StatusEnum.WAITING.getValue());
+        boolean save = this.save(chart);
+        if (!save) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "图表数据保存失败");
+        }
+
+        // 使用异步任务调用AI接口
+        CompletableFuture.runAsync(() -> {
+            try {
+                // 更新图表状态为执行中
+                chart.setStatus(StatusEnum.RUNNING.getValue());
+                boolean isUpdate = this.updateById(chart);
+                if (!isUpdate) {
+                    throw new BusinessException(ErrorCode.OPERATION_ERROR);
+                }
+
+                // 调用AI获取结果
+                String res = aiManager.sendMsgToXingHuo(true, userInput.toString());
+                // 对结果进行切割
+                String[] results = res.split("'【【【【【'");
+                int len = 3;
+                if (results.length < len) {
+                    throw new BusinessException(ErrorCode.SYSTEM_ERROR, "AI生成结果错误");
+                }
+                String genChart = results[1].trim();
+                String genResult = results[2].trim();
+
+                // 更新图表状态为成功以及更新图表数据
+                chart.setStatus(StatusEnum.SUCCESS.getValue());
+                chart.setGenChart(genChart);
+                chart.setGenResult(genResult);
+                boolean updated = this.updateById(chart);
+                if (!updated) {
+                    throw new BusinessException(ErrorCode.OPERATION_ERROR);
+                }
+            } catch (BusinessException be) {
+                log.error(be.getMessage());
+                handleUpdateError(chart.getId(), be.getMessage());
+            }
+        }, threadPoolExecutor).exceptionally(
+                e -> {
+                    log.error("任务提交失败", e);
+                    handleUpdateError(chart.getId(), e.getMessage());
+                    return null;
+                }
+        );
 
         // 返回结果
         AiRespVo respVo = new AiRespVo();
-        respVo.setGenChart(genChart);
-        respVo.setGenResult(genResult);
         respVo.setChartId(chart.getId());
         return respVo;
+    }
+
+    /**
+     * 更新图表状态为失败
+     *
+     * @param chartId     图表ID
+     * @param execMessage 错误信息
+     */
+    private void handleUpdateError(Long chartId, String execMessage) {
+        Chart chart = new Chart();
+        chart.setId(chartId);
+        chart.setExecMessage(execMessage);
+        chart.setStatus(StatusEnum.FAILED.getValue());
+        this.updateById(chart);
     }
 
     /**

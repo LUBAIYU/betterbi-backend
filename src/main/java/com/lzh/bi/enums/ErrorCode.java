@@ -19,7 +19,8 @@ public enum ErrorCode {
     FORBIDDEN_ERROR(40300, "禁止访问"),
     NOT_FOUND_ERROR(40400, "请求数据不存在"),
     TOO_MANY_REQUEST(42900, "请求过于频繁"),
-    SYSTEM_ERROR(50000, "系统内部异常");
+    SYSTEM_ERROR(50000, "系统内部异常"),
+    OPERATION_ERROR(50100, "图表状态更改失败");
 
     /**
      * 状态码
