@@ -116,8 +116,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
         // 如果当前用户不是管理员或者不是用户自己本身，则不能查看该用户信息
         Integer userRole = userVo.getUserRole();
-        Long loginUserId = userVo.getId();
-        if (!RoleEnum.ADMIN.getCode().equals(userRole) && !id.equals(loginUserId)) {
+        String loginUserId = userVo.getId();
+        if (!RoleEnum.ADMIN.getCode().equals(userRole) && !String.valueOf(id).equals(loginUserId)) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
         }
 
@@ -160,23 +160,39 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     @Override
     public boolean updateUserById(UserUpdateDto dto, HttpServletRequest request) {
-        // 获取登录用户信息
-        UserVo userVo = this.getLoginUser(request);
+        // 参数复制
+        User user = new User();
+        BeanUtil.copyProperties(dto, user);
 
-        // 如果当前用户是普通用户，则不能修改角色状态
-        Integer userCode = RoleEnum.USER.getCode();
-        Integer adminCode = RoleEnum.ADMIN.getCode();
-        if (userCode.equals(userVo.getUserRole()) && adminCode.equals(dto.getUserRole())) {
+        // 如果有密码，则需重新加密再赋值
+        String userPassword = dto.getUserPassword();
+        if (StrUtil.isNotBlank(userPassword)) {
+            // 长度不能小于8位
+            if (userPassword.length() < 8) {
+                throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码长度不能小于8位");
+            }
+            // 重新加密再赋值
+            user.setUserPassword(DigestUtil.md5Hex(userPassword));
+        }
+
+        // 如果有传递角色信息，则需判断当前用户是否有权限修改
+        Integer userRole = dto.getUserRole();
+        RoleEnum roleEnum = RoleEnum.getEnumByCode(userRole);
+        if (roleEnum == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "请输入有效的角色信息");
+        }
+
+        // 获取登录用户角色信息
+        UserVo loginUser = this.getLoginUser(request);
+        Integer loginUserRole = loginUser.getUserRole();
+        RoleEnum loginUserRoleEnum = RoleEnum.getEnumByCode(loginUserRole);
+
+        // 如果不是管理员，则不能传递管理员角色信息
+        if (!RoleEnum.ADMIN.equals(loginUserRoleEnum) && RoleEnum.ADMIN.equals(roleEnum)) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
         }
 
-        // 对密码进行重新加密再修改
-        String encryptPassword = DigestUtil.md5Hex(dto.getUserPassword());
-        User user = new User();
-        BeanUtil.copyProperties(dto, user);
-        user.setUserPassword(encryptPassword);
-
-        // 修改用户信息
+        // 更新
         return this.updateById(user);
     }
 
@@ -215,7 +231,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         // 获取图片后缀名
         String suffix = fileName.substring(fileName.lastIndexOf(".") + 1);
         // 获取图片存放路径
-        String url = address + "/" + suffix;
+        String url = address + "/" + fileName;
         // 响应图片
         response.setContentType("image/" + suffix);
 

@@ -52,12 +52,12 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
     public long addChart(ChartAddDto dto, HttpServletRequest request) {
         // 获取登录用户ID
         UserVo userVo = userService.getLoginUser(request);
-        Long userId = userVo.getId();
+        String userId = userVo.getId();
 
         // 插入图表数据
         Chart chart = new Chart();
         BeanUtil.copyProperties(dto, chart);
-        chart.setUserId(userId);
+        chart.setUserId(Long.parseLong(userId));
         this.save(chart);
 
         return chart.getId();
@@ -67,7 +67,7 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
     public boolean delChartById(Long id, HttpServletRequest request) {
         // 获取登录用户信息
         UserVo userVo = userService.getLoginUser(request);
-        Long userId = userVo.getId();
+        String userId = userVo.getId();
         Integer userRole = userVo.getUserRole();
 
         // 根据ID获取图表数据
@@ -80,7 +80,7 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
         Long createUserId = chart.getUserId();
 
         // 如果登录用户不是管理员，且创建用户ID和登录用户ID不一致，则抛出权限异常
-        if (!RoleEnum.ADMIN.getCode().equals(userRole) && !userId.equals(createUserId)) {
+        if (!RoleEnum.ADMIN.getCode().equals(userRole) && !userId.equals(String.valueOf(createUserId))) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
         }
 
@@ -92,7 +92,7 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
     public boolean updateChartById(ChartUpdateDto dto, HttpServletRequest request) {
         // 获取登录用户信息
         UserVo userVo = userService.getLoginUser(request);
-        Long userId = userVo.getId();
+        Long userId = Long.parseLong(userVo.getId());
         Integer userRole = userVo.getUserRole();
 
         // 根据ID获取图表数据
@@ -118,7 +118,7 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
     public Chart selectChartById(Long id, HttpServletRequest request) {
         // 获取登录用户信息
         UserVo userVo = userService.getLoginUser(request);
-        Long loginUserId = userVo.getId();
+        Long loginUserId = Long.parseLong(userVo.getId());
         Integer userRole = userVo.getUserRole();
 
         // 如果是管理员，则直接根据ID查询
@@ -137,7 +137,7 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
     public PageBean<ChartVo> listMyChartByPage(ChartQueryDto dto, HttpServletRequest request) {
         // 获取登录用户ID
         UserVo userVo = userService.getLoginUser(request);
-        Long loginUserId = userVo.getId();
+        Long loginUserId = Long.parseLong(userVo.getId());
 
         // 添加分页参数
         IPage<Chart> pageParam = new Page<>(dto.getCurrent(), dto.getPageSize());
@@ -148,7 +148,7 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
                 .like(StrUtil.isNotBlank(dto.getName()), Chart::getName, dto.getName())
                 .like(StrUtil.isNotBlank(dto.getGoal()), Chart::getGoal, dto.getGoal())
                 .like(StrUtil.isNotBlank(dto.getChartType()), Chart::getChartType, dto.getChartType())
-                .eq(loginUserId != null, Chart::getUserId, loginUserId)
+                .eq(Chart::getUserId, loginUserId)
                 .orderByDesc(Chart::getCreateTime)
                 .page(pageParam);
 
@@ -189,7 +189,7 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
     public AiRespVo genChartByAi(MultipartFile multipartFile, ChartGenDto dto, HttpServletRequest request) {
         // 获取登录用户信息
         UserVo userVo = userService.getLoginUser(request);
-        Long userId = userVo.getId();
+        Long userId = Long.parseLong(userVo.getId());
 
         // 执行限流操作
         redisLimiterManager.doRateLimit("genChartByAi_" + userId);
@@ -217,7 +217,8 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
 
         // 对结果进行切割
         String[] results = res.split("'【【【【【'");
-        if (results.length < 3) {
+        int len = 3;
+        if (results.length < len) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "AI生成结果错误");
         }
         String genChart = results[1].trim();

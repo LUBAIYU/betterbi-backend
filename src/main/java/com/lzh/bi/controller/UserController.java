@@ -1,5 +1,6 @@
 package com.lzh.bi.controller;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
 import com.lzh.bi.annotation.LoginCheck;
 import com.lzh.bi.annotation.MustAdmin;
@@ -107,5 +108,17 @@ public class UserController {
         }
         request.getSession().setAttribute(UserConst.USER_LOGIN_STATE, null);
         return Result.success();
+    }
+
+    @LoginCheck
+    @GetMapping("/get/vo/{id}")
+    public Result<UserVo> getUserVoById(@NotNull @PathVariable Long id, HttpServletRequest request) {
+        if (id <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User user = userService.getUserInfoById(id, request);
+        UserVo userVo = new UserVo();
+        BeanUtil.copyProperties(user, userVo);
+        return Result.success(userVo);
     }
 }

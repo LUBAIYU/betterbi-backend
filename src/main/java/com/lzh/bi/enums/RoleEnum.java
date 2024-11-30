@@ -24,4 +24,16 @@ public enum RoleEnum {
     RoleEnum(Integer code) {
         this.code = code;
     }
+
+    public static RoleEnum getEnumByCode(Integer code) {
+        if (code == null) {
+            return null;
+        }
+        for (RoleEnum roleEnum : RoleEnum.values()) {
+            if (roleEnum.getCode().equals(code)) {
+                return roleEnum;
+            }
+        }
+        return null;
+    }
 }
