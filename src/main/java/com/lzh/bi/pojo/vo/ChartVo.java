@@ -48,6 +48,16 @@ public class ChartVo implements Serializable {
     private String genResult;
 
     /**
+     * 状态（0-等待，1-成功，2-失败，3-执行中）
+     */
+    private Integer status;
+
+    /**
+     * 执行信息
+     */
+    private String execMessage;
+
+    /**
      * 创建时间
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
