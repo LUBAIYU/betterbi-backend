@@ -15,6 +15,7 @@ import com.lzh.bi.exception.BusinessException;
 import com.lzh.bi.manager.AiManager;
 import com.lzh.bi.manager.RedisLimiterManager;
 import com.lzh.bi.mapper.ChartMapper;
+import com.lzh.bi.mq.MessageProducer;
 import com.lzh.bi.pojo.dto.*;
 import com.lzh.bi.pojo.entity.Chart;
 import com.lzh.bi.pojo.vo.AiRespVo;
@@ -32,8 +33,6 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.stream.Collectors;
 
 /**
@@ -54,7 +53,7 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
     private RedisLimiterManager redisLimiterManager;
 
     @Resource
-    private ThreadPoolExecutor threadPoolExecutor;
+    private MessageProducer messageProducer;
 
     @Override
     public long addChart(ChartAddDto dto, HttpServletRequest request) {
@@ -212,14 +211,6 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
         // 将Excel数据转换为CSV格式
         String csvData = ExcelUtil.excelToCsv(multipartFile);
 
-        // 拼接请求，向AI输入数据
-        StringBuilder userInput = new StringBuilder();
-        userInput.append("分析目标：").append(goal).append("\n");
-        if (StrUtil.isNotBlank(chartType)) {
-            userInput.append("请精确使用").append(chartType).append("\n");
-        }
-        userInput.append("数据：").append(csvData).append("\n");
-
         // 保存图表数据
         Chart chart = new Chart();
         chart.setUserId(userId);
@@ -233,50 +224,13 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "图表数据保存失败");
         }
 
-        // 使用异步任务调用AI接口
-        CompletableFuture.runAsync(() -> {
-            try {
-                // 更新图表状态为执行中
-                chart.setStatus(StatusEnum.RUNNING.getValue());
-                boolean isUpdate = this.updateById(chart);
-                if (!isUpdate) {
-                    throw new BusinessException(ErrorCode.OPERATION_ERROR);
-                }
-
-                // 调用AI获取结果
-                String res = aiManager.sendMsgToXingHuo(true, userInput.toString());
-                // 对结果进行切割
-                String[] results = res.split("'【【【【【'");
-                int len = 3;
-                if (results.length < len) {
-                    throw new BusinessException(ErrorCode.SYSTEM_ERROR, "AI生成结果错误");
-                }
-                String genChart = results[1].trim();
-                String genResult = results[2].trim();
-
-                // 更新图表状态为成功以及更新图表数据
-                chart.setStatus(StatusEnum.SUCCESS.getValue());
-                chart.setGenChart(genChart);
-                chart.setGenResult(genResult);
-                boolean updated = this.updateById(chart);
-                if (!updated) {
-                    throw new BusinessException(ErrorCode.OPERATION_ERROR);
-                }
-            } catch (BusinessException be) {
-                log.error(be.getMessage());
-                handleUpdateError(chart.getId(), be.getMessage());
-            }
-        }, threadPoolExecutor).exceptionally(
-                e -> {
-                    log.error("任务提交失败", e);
-                    handleUpdateError(chart.getId(), e.getMessage());
-                    return null;
-                }
-        );
+        // 发送消息到MQ
+        long chartId = chart.getId();
+        messageProducer.sendMessage(String.valueOf(chartId));
 
         // 返回结果
         AiRespVo respVo = new AiRespVo();
-        respVo.setChartId(chart.getId());
+        respVo.setChartId(chartId);
         return respVo;
     }
 
@@ -286,7 +240,8 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
      * @param chartId     图表ID
      * @param execMessage 错误信息
      */
-    private void handleUpdateError(Long chartId, String execMessage) {
+    @Override
+    public void handleUpdateError(Long chartId, String execMessage) {
         Chart chart = new Chart();
         chart.setId(chartId);
         chart.setExecMessage(execMessage);

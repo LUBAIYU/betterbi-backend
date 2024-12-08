@@ -77,4 +77,12 @@ public interface ChartService extends IService<Chart> {
      * @return AI生成结果
      */
     AiRespVo genChartByAi(MultipartFile multipartFile, ChartGenDto dto, HttpServletRequest request);
+
+    /**
+     * 处理AI生成错误
+     *
+     * @param chartId     图表ID
+     * @param execMessage 执行信息
+     */
+    void handleUpdateError(Long chartId, String execMessage);
 }
